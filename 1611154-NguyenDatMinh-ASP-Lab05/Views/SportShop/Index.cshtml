@@ -1,0 +1,286 @@
+﻿
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/SportShopLayout.cshtml";
+}
+
+@section BASKETBALL {
+    <div class="basketball">
+
+    </div>
+}
+
+@section FOOTBALL {
+    <div class="football">
+
+    </div>
+}
+
+@section SWIMMING {
+    <div class="swimming">
+
+    </div>
+}
+
+@section MODAL_DIALOG {
+    <div class="modal fade" id="CreateEditModal" role="dialog">
+        <div class="modal-dialog btn-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title"><label id="title">No Title</label></h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-horizontal">
+                        <div class="form-group">
+                            <div class="col-md-10">
+                                <input type="hidden" class="form-control" id="Id" />
+                                <label>Sport Name</label>
+                                <input type="text" id="SportName" class="form-control" />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-md-10">
+                                @using (Html.BeginForm("Index", "SportShop", null, FormMethod.Post, new { enctype = "multipart/form-data", id = "UploadForm" }))
+                                {
+                                    <label>Image Path</label>
+                                    <input type="file" name="file" class="form-control-file" id="ImagePath" />
+                                    <input type="submit" id="btnsubmit" class="hidden" />
+                                }
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-md-10">
+                                <label>Price</label>
+                                <input type="text" id="Price" class="form-control" />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-md-10">
+                                <label>Quantity</label>
+                                <input type="text" id="Quantity" class="form-control" />
+                            </div>
+                        </div>
+                        <div class="form-group disappear">
+                            <div class="col-md-10">
+                                <label>Date Add</label>
+                                <input type="text" id="DateAdd" class="form-control" readonly="readonly" />
+                            </div>
+                        </div>
+                        <div class="form-group disappear">
+                            <div class="col-md-10">
+                                <label>Status</label>
+                                <select class="form-control" id="Status">
+                                    <option value="AVAILABLE">AVAILABLE</option>
+                                    <option value="SOLD OUT">SOLD OUT</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-md-10">
+                                <label>Type</label>
+                                <select class="form-control" id="Type">
+                                    <option value="BASKETBALL">BASKETBALL</option>
+                                    <option value="FOOTBALL">FOOTBALL</option>
+                                    <option value="SWIMMING">SWIMMING</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="btnClose" class="btn btn-default" data-dismiss="modal">Close</button>
+                    <button type="button" id="btnSave" class="btn btn-primary" data-dismiss="modal">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Script {
+    <script type="text/javascript">
+        var isUpdatable = false;
+        var currentUpdatePath = "";
+        var currentId = 0;
+
+        $(document).ready(function () {
+            showItems();
+
+            $("#btnCreateNew").click(function (e) {
+                clearModalContent();
+                $(".disappear").hide();
+                isUpdatable = false;
+                $("#title").text("Add New");
+            });
+
+            $("#btnSave").click(function (e) {
+
+                var data = {
+                    Id: $("#Id").val(),
+                    SportName: $.trim($("#SportName").val()),
+                    ImagePath: $("#ImagePath").val(),
+                    Price: $("#Price").val(),
+                    Quantity: $("#Quantity").val(),
+                    DateAdd: $("#DateAdd").val(),
+                    Status: $("#Status").val(),
+                    Type: $("#Type").val()
+                }
+
+                if (!isUpdatable) {
+                    if (!data.ImagePath || !data.SportName || !data.Price || !data.Quantity) {
+                        alert("You should input Name , Price , Quantity and choose an Image");
+                        return;
+                    }
+                }
+                else {
+                    if (!data.ImagePath) {
+                        data.ImagePath = currentUpdatePath;
+                    }
+                    data.Id = currentId;
+                }
+
+                alert(data.ImagePath);
+
+                $("#UploadForm").submit();
+
+                if (!isUpdatable) {
+                    $.ajax({
+                        url: '/SportShop/Create/',
+                        type: 'POST',
+                        dataType: 'json',
+                        data: data,
+                        success: function (data) {
+                            alert("ADD NEW SUCCESS");
+                            showItems();
+                        },
+                        error: function (err) {
+                            alert("Error:" + err.responseText);
+                        }
+                    });
+                }
+                else {
+                    $.ajax({
+                        url: '/SportShop/Update/',
+                        type: 'POST',
+                        dataType: 'json',
+                        data: data,
+                        success: function (data) {
+                            alert("UPDATE SUCCESS");
+                            showItems();
+                        },
+                        error: function (err) {
+                            alert("Error:" + err.responseText);
+                        }
+                    });
+                }
+            });
+
+
+            function clearModalContent() {
+                $("#SportName").val("");
+                $("#ImagePath").val("");
+                $("#Price").val("");
+                $("#Quantity").val("");
+                $("Status").val("AVAILABLE");
+                $("Type").val("BASKETBALL");
+            }
+
+
+        });
+
+        function showItems() {
+            $(".basketball").empty();
+            $(".football").empty();
+            $(".swimming").empty();
+
+            $.ajax({
+                url: '/SportShop/ListItems/',
+                type: 'GET',
+                dataType: 'json',
+                success: function (data) {
+                    var formatprice = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'VND' });
+                    $.each(data, function (i, item) {
+                        var Id = item.Id;
+                        var SportName = item.SportName;
+                        var ImagePath = item.ImagePath;
+                        var Price = formatprice.format(item.Price);
+                        var Quantity = item.Quantity;
+                        var DateAdd = item.DateAdd;
+                        var Status = item.Status;
+                        var classname = "";
+                        if (item.Type == "BASKETBALL")
+                            classname = ".basketball";
+                        if (item.Type == "FOOTBALL")
+                            classname = ".football";
+                        if (item.Type == "SWIMMING")
+                            classname = ".swimming";
+                        $("#DateAdd").val(DateAdd);
+                        $("#Quantity").val(Quantity);
+                        $("#Status").val(Status);
+                        AppendNewItem(Id, classname, SportName, ImagePath, Price);
+                    });
+                },
+                error: function (err) {
+                    alert("Error:" + err.responseText);
+                }
+            });
+            function AppendNewItem(Id, classname, SportName, ImagePath, Price) {
+                var rows = '';
+                rows += "<div class='item'>";
+                rows += "<a href='#'><img src=\"/Assets/" + ImagePath + "\" alt = '' /></a > ";
+                rows += "<h2 class='subtitle'>" + SportName + "</h2>";
+                rows += "<h1>" + Price + "</h1>";
+                rows += "<ul class='contact'>";
+                rows += "<li><button type = 'button' id = 'btnEdit' class = 'btn btn-default' data-toggle ='modal' data-target='#CreateEditModal' onclick ='return getDetailItem(" + Id + ")' > Edit </button></li>";
+                rows += "<li><button type = 'button' id = 'btnDelete' class = 'btn btn-danger' onclick ='return deleteItem(" + Id + ")'>Delete</button>";
+                rows += "</ul>";
+                rows += "</div>";
+                $(classname).append(rows);
+            }
+        }
+        function deleteItem(id) {
+            var confirmDelete = confirm("Do you want to delete this product ?");
+            if (confirmDelete) {
+                $.ajax({
+                    url: '/SportShop/Delete/' + id,
+                    type: 'POST',
+                    dataType: 'json',
+                    success: function (data) {
+                        alert("DELETE SUCCESS");
+                        showItems();
+                    },
+                    error: function (err) {
+                        alert("Error:" + err.responseText);
+                    }
+                });
+            }
+        }
+        function getDetailItem(id) {
+            isUpdatable = true;
+            currentUpdatePath = "";
+            currentId = 0;
+            $(".disappear").show();
+            $("#title").text("Edit");
+
+            $.ajax({
+                url: '/SportShop/Get/' + id,
+                type: 'GET',
+                dataType: 'json',
+                success: function (data) {
+                    $("#SportName").val(data.SportName);
+                    $("#Price").val(data.Price);
+                    $("#Quantity").val(data.Quantity);
+                    $("#Type").val(data.Type);
+                    $("#DateAdd").val(data.DateAdd);
+                    $("#Status").val(data.Status);
+                    $("#Id").val(data.Id);
+                    currentUpdatePath = data.ImagePath;
+                    currentId = data.Id;
+                },
+                error: function (err) {
+                    alert("Error:" + err.responseText);
+                }
+            });
+        }
+    </script>
+}
